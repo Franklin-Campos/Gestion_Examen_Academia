@@ -8,17 +8,16 @@ export default function Home() {
   const [notaActual, setNotaActual] = useState(null)
   const [historial, setHistorial] = useState([])
   const [cargando, setCargando] = useState(true)
+  const [confirmarSalir, setConfirmarSalir] = useState(false)
 
   useEffect(() => {
     cargarDatos()
   }, [])
 
   const cargarDatos = async () => {
-    // 1. Obtener usuario autenticado
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    // 2. Obtener datos del alumno
     const { data: alumnoData } = await supabase
       .from('alumnos')
       .select('*')
@@ -26,7 +25,6 @@ export default function Home() {
       .single()
     if (alumnoData) setAlumno(alumnoData)
 
-    // 3. Buscar examen programado para HOY (zona horaria Perú)
     const ahoraPeru = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Lima' }))
     const year = ahoraPeru.getFullYear()
     const month = String(ahoraPeru.getMonth() + 1).padStart(2, '0')
@@ -40,7 +38,6 @@ export default function Home() {
       .single()
 
     if (examenData) {
-      // Si el examen está en_curso pero ya pasó la hora, marcarlo como finalizado
       const [y2, m2, d2] = examenData.fecha_programada.split('-')
       const horaExamen2 = new Date(parseInt(y2), parseInt(m2) - 1, parseInt(d2), 14, 0, 0)
       const horaFin2 = new Date(horaExamen2.getTime() + examenData.duracion_minutos * 60000)
@@ -55,28 +52,49 @@ export default function Home() {
 
       setExamenHoy(examenData)
 
-      // 4. Verificar si el alumno ya rindió este examen
       const { data: realizadoData } = await supabase
         .from('examenes_realizados')
         .select('*')
         .eq('alumno_id', user.id)
         .eq('examen_id', examenData.id)
+        .eq('estado', 'finalizado')
         .single()
 
       if (realizadoData) {
         setYaRindio(true)
         setNotaActual(realizadoData)
+      } else if (examenData.estado === 'finalizado' && ahoraPeru > horaFin2) {
+        const { data: noPresentado } = await supabase
+          .from('examenes_realizados')
+          .insert({
+            alumno_id: user.id,
+            examen_id: examenData.id,
+            nota: 0,
+            color: 'rojo',
+            correctas: 0,
+            incorrectas: 0,
+            sin_responder: 20,
+            estado: 'finalizado',
+            finalizado_en: new Date().toISOString()
+          })
+          .select()
+          .single()
+
+        if (noPresentado) {
+          setYaRindio(true)
+          setNotaActual(noPresentado)
+        }
       }
     }
 
-    // 5. Cargar historial de notas
     const { data: historialData } = await supabase
       .from('examenes_realizados')
       .select(`
         *,
-        examenes:titulo
+        examen:examen_id(titulo)
       `)
       .eq('alumno_id', user.id)
+      .eq('estado', 'finalizado')
       .order('finalizado_en', { ascending: false })
 
     if (historialData) setHistorial(historialData)
@@ -84,12 +102,10 @@ export default function Home() {
     setCargando(false)
   }
 
-  // Obtener hora actual en Perú
   const getAhoraPeru = () => {
     return new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Lima' }))
   }
 
-  // Verificar si ya es la hora del examen (2:00 PM o después)
   const esHoraExamen = () => {
     if (!examenHoy) return false
     const ahora = getAhoraPeru()
@@ -98,7 +114,6 @@ export default function Home() {
     return ahora >= horaExamen
   }
 
-  // Verificar si el examen ya finalizó (hora inicio + duración)
   const examenFinalizo = () => {
     if (!examenHoy) return false
     const ahora = getAhoraPeru()
@@ -115,8 +130,7 @@ export default function Home() {
 
   if (cargando) {
     return (
-      <div className="min-h-screen flex items-center justify-center"
-        style={{ background: '#1e1b4b' }}>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#1e1b4b' }}>
         <div className="text-center">
           <div className="w-8 h-8 border-2 border-violet-400 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
           <p className="text-white">Cargando...</p>
@@ -127,28 +141,39 @@ export default function Home() {
 
   if (!alumno) {
     return (
-      <div className="min-h-screen flex items-center justify-center"
-        style={{ background: '#1e1b4b' }}>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#1e1b4b' }}>
         <p className="text-white">Error al cargar datos</p>
       </div>
     )
   }
 
   return (
-    <div
-      className="min-h-screen p-4 md:p-8"
+    <div className="min-h-screen p-4 md:p-8"
       style={{
-        background: `
-          radial-gradient(ellipse at 20% 50%, #c026d3 0%, transparent 50%),
-          radial-gradient(ellipse at 80% 30%, #2563eb 0%, transparent 55%),
-          radial-gradient(ellipse at 50% 80%, #7c3aed 0%, transparent 60%),
-          #1e1b4b
-        `
+        background: `radial-gradient(ellipse at 20% 50%, #c026d3 0%, transparent 50%), radial-gradient(ellipse at 80% 30%, #2563eb 0%, transparent 55%), radial-gradient(ellipse at 50% 80%, #7c3aed 0%, transparent 60%), #1e1b4b`
       }}
     >
+      {/* Modal confirmar salir */}
+      {confirmarSalir && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 border border-white/10 rounded-3xl p-8 shadow-2xl max-w-md w-full text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-yellow-500/20 rounded-full mb-4">
+              <svg className="w-8 h-8 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2">¿Cerrar sesión?</h3>
+            <p className="text-violet-300 text-sm mb-6">Serás redirigido al inicio de sesión.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmarSalir(false)} className="flex-1 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all font-medium">Cancelar</button>
+              <button onClick={cerrarSesion} className="flex-1 py-3 bg-yellow-500 hover:bg-yellow-400 text-white rounded-xl transition-all font-medium">Sí, salir</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-2xl mx-auto">
         
-        {/* Encabezado */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
             <img src="/logo_SOFIA.png" alt="Academia Sofia" className="h-10 w-auto" />
@@ -157,15 +182,11 @@ export default function Home() {
               <p className="text-violet-300 text-sm">DNI: {alumno.dni}</p>
             </div>
           </div>
-          <button
-            onClick={cerrarSesion}
-            className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all text-sm"
-          >
+          <button onClick={() => setConfirmarSalir(true)} className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all text-sm">
             Cerrar Sesión
           </button>
         </div>
 
-        {/* Examen de hoy */}
         <div className="bg-white/5 backdrop-blur-xl rounded-3xl p-6 shadow-2xl border border-white/10 mb-6">
           <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
             <svg className="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -191,9 +212,13 @@ export default function Home() {
                 <span className="text-2xl font-bold text-white">{notaActual.nota}</span>
               </div>
               <p className="text-white font-medium">{examenHoy.titulo}</p>
-              <p className="text-violet-300 text-sm mt-1">Ya realizaste este examen</p>
+              {notaActual.nota === 0 && notaActual.sin_responder === 20 ? (
+                <p className="text-red-300 text-sm mt-1">No te presentaste a este examen</p>
+              ) : (
+                <p className="text-violet-300 text-sm mt-1">Ya realizaste este examen</p>
+              )}
               <p className="text-sm mt-2 font-medium">
-                Nota: {notaActual.nota}/20 - {notaActual.correctas} ✅ {notaActual.incorrectas} ❌ {notaActual.sin_responder} ⚪
+                {notaActual.correctas} ✅ {notaActual.incorrectas} ❌ {notaActual.sin_responder} ⚪
               </p>
             </div>
           ) : (
@@ -209,33 +234,20 @@ export default function Home() {
 
               {!esHoraExamen() ? (
                 <div className="mt-4">
-                  <button
-                    disabled
-                    className="px-6 py-3 bg-violet-600/30 text-violet-300/50 rounded-xl font-medium cursor-not-allowed"
-                  >
-                    Iniciar Examen
-                  </button>
-                  <p className="text-violet-400/50 text-xs mt-2">
-                    Disponible a las 2:00 PM
-                  </p>
+                  <button disabled className="px-6 py-3 bg-violet-600/30 text-violet-300/50 rounded-xl font-medium cursor-not-allowed">Iniciar Examen</button>
+                  <p className="text-violet-400/50 text-xs mt-2">Disponible a las 2:00 PM</p>
                 </div>
               ) : examenFinalizo() ? (
                 <div className="mt-4">
                   <p className="text-yellow-300 text-sm">El examen ya finalizó. No se aceptan más ingresos.</p>
                 </div>
               ) : (
-                <a
-                  href={`/examen?examen_id=${examenHoy.id}`}
-                  className="mt-4 inline-block px-8 py-3 bg-violet-500 hover:bg-violet-400 text-white font-semibold rounded-xl transition-all shadow-lg shadow-violet-500/25"
-                >
-                  Iniciar Examen
-                </a>
+                <a href={`/examen?examen_id=${examenHoy.id}`} className="mt-4 inline-block px-8 py-3 bg-violet-500 hover:bg-violet-400 text-white font-semibold rounded-xl transition-all shadow-lg shadow-violet-500/25">Iniciar Examen</a>
               )}
             </div>
           )}
         </div>
 
-        {/* Historial de notas */}
         <div className="bg-white/5 backdrop-blur-xl rounded-3xl p-6 shadow-2xl border border-white/10">
           <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
             <svg className="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -253,22 +265,17 @@ export default function Home() {
               {historial.map((item) => (
                 <div key={item.id} className="bg-white/5 rounded-xl p-4 border border-white/5 flex items-center justify-between">
                   <div>
-                    <p className="text-white font-medium">
-                      {item.examenes?.titulo || 'Examen'}
-                    </p>
+                    <p className="text-white font-medium">{item.examen?.titulo || 'Examen'}</p>
                     <p className="text-violet-400/60 text-xs mt-0.5">
                       {new Date(item.finalizado_en).toLocaleDateString('es-PE')}
                     </p>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
-                      item.color === 'verde' ? 'bg-green-500/20 text-green-300' :
-                      item.color === 'ambar' ? 'bg-yellow-500/20 text-yellow-300' :
-                      'bg-red-500/20 text-red-300'
-                    }`}>
-                      {item.nota}
-                    </div>
-                    <span className="text-white font-medium">{item.nota}/20</span>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
+                    item.color === 'verde' ? 'bg-green-500/20 text-green-300' :
+                    item.color === 'ambar' ? 'bg-yellow-500/20 text-yellow-300' :
+                    'bg-red-500/20 text-red-300'
+                  }`}>
+                    {item.nota}
                   </div>
                 </div>
               ))}
