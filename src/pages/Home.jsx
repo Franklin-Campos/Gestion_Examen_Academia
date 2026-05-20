@@ -133,7 +133,7 @@ export default function Home() {
       <div className="min-h-screen flex items-center justify-center" style={{ background: '#1e1b4b' }}>
         <div className="text-center">
           <div className="w-8 h-8 border-2 border-violet-400 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-          <p className="text-white">Cargando...</p>
+          <p className="text-white text-sm">Cargando...</p>
         </div>
       </div>
     )
@@ -148,7 +148,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen p-4 md:p-8"
+    <div className="min-h-screen p-3 sm:p-4 md:p-8"
       style={{
         background: `radial-gradient(ellipse at 20% 50%, #c026d3 0%, transparent 50%), radial-gradient(ellipse at 80% 30%, #2563eb 0%, transparent 55%), radial-gradient(ellipse at 50% 80%, #7c3aed 0%, transparent 60%), #1e1b4b`
       }}
@@ -156,17 +156,17 @@ export default function Home() {
       {/* Modal confirmar salir */}
       {confirmarSalir && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 border border-white/10 rounded-3xl p-8 shadow-2xl max-w-md w-full text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-yellow-500/20 rounded-full mb-4">
-              <svg className="w-8 h-8 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="bg-gray-900 border border-white/10 rounded-2xl sm:rounded-3xl p-6 sm:p-8 shadow-2xl max-w-sm w-full mx-4 text-center">
+            <div className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 bg-yellow-500/20 rounded-full mb-3 sm:mb-4">
+              <svg className="w-7 h-7 sm:w-8 sm:h-8 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
               </svg>
             </div>
-            <h3 className="text-xl font-bold text-white mb-2">¿Cerrar sesión?</h3>
-            <p className="text-violet-300 text-sm mb-6">Serás redirigido al inicio de sesión.</p>
-            <div className="flex gap-3">
-              <button onClick={() => setConfirmarSalir(false)} className="flex-1 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all font-medium">Cancelar</button>
-              <button onClick={cerrarSesion} className="flex-1 py-3 bg-yellow-500 hover:bg-yellow-400 text-white rounded-xl transition-all font-medium">Sí, salir</button>
+            <h3 className="text-lg sm:text-xl font-bold text-white mb-2">¿Cerrar sesión?</h3>
+            <p className="text-violet-300 text-xs sm:text-sm mb-5 sm:mb-6">Serás redirigido al inicio de sesión.</p>
+            <div className="flex gap-2 sm:gap-3">
+              <button onClick={() => setConfirmarSalir(false)} className="flex-1 py-2.5 sm:py-3 text-sm bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all font-medium">Cancelar</button>
+              <button onClick={cerrarSesion} className="flex-1 py-2.5 sm:py-3 text-sm bg-yellow-500 hover:bg-yellow-400 text-white rounded-xl transition-all font-medium">Sí, salir</button>
             </div>
           </div>
         </div>
@@ -174,103 +174,106 @@ export default function Home() {
 
       <div className="max-w-2xl mx-auto">
         
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <img src="/logo_SOFIA.png" alt="Academia Sofia" className="h-10 w-auto" />
+        {/* Header responsivo */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-6 sm:mb-8">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <img src="/logo_SOFIA.png" alt="Academia Sofia" className="h-8 sm:h-10 w-auto" />
             <div>
-              <h1 className="text-xl font-bold text-white">Bienvenido, {alumno.nombre_completo}</h1>
-              <p className="text-violet-300 text-sm">DNI: {alumno.dni}</p>
+              <h1 className="text-base sm:text-xl font-bold text-white truncate max-w-[200px] sm:max-w-full">Bienvenido, {alumno.nombre_completo}</h1>
+              <p className="text-violet-300 text-xs sm:text-sm">DNI: {alumno.dni}</p>
             </div>
           </div>
-          <button onClick={() => setConfirmarSalir(true)} className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all text-sm">
+          <button onClick={() => setConfirmarSalir(true)} className="px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all">
             Cerrar Sesión
           </button>
         </div>
 
-        <div className="bg-white/5 backdrop-blur-xl rounded-3xl p-6 shadow-2xl border border-white/10 mb-6">
-          <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-            <svg className="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        {/* Examen de hoy */}
+        <div className="bg-white/5 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl border border-white/10 mb-4 sm:mb-6">
+          <h2 className="text-base sm:text-lg font-bold text-white mb-3 sm:mb-4 flex items-center gap-2">
+            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
             Examen de Hoy
           </h2>
 
           {!examenHoy ? (
-            <div className="text-center py-6">
-              <svg className="w-12 h-12 text-violet-500/50 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="text-center py-4 sm:py-6">
+              <svg className="w-10 h-10 sm:w-12 sm:h-12 text-violet-500/50 mx-auto mb-2 sm:mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
               </svg>
-              <p className="text-violet-300/60 text-sm">No hay exámenes programados para hoy.</p>
+              <p className="text-violet-300/60 text-xs sm:text-sm">No hay exámenes programados para hoy.</p>
             </div>
           ) : yaRindio ? (
-            <div className="bg-white/5 rounded-2xl p-6 text-center">
-              <div className={`inline-flex items-center justify-center w-16 h-16 rounded-full mb-3 ${
+            <div className="bg-white/5 rounded-2xl p-4 sm:p-6 text-center">
+              <div className={`inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-full mb-2 sm:mb-3 ${
                 notaActual.color === 'verde' ? 'bg-green-500/20' :
                 notaActual.color === 'ambar' ? 'bg-yellow-500/20' :
                 'bg-red-500/20'
               }`}>
-                <span className="text-2xl font-bold text-white">{notaActual.nota}</span>
+                <span className="text-xl sm:text-2xl font-bold text-white">{notaActual.nota}</span>
               </div>
-              <p className="text-white font-medium">{examenHoy.titulo}</p>
+              <p className="text-white font-medium text-sm sm:text-base">{examenHoy.titulo}</p>
               {notaActual.nota === 0 && notaActual.sin_responder === 20 ? (
-                <p className="text-red-300 text-sm mt-1">No te presentaste a este examen</p>
+                <p className="text-red-300 text-xs sm:text-sm mt-1">No te presentaste a este examen</p>
               ) : (
-                <p className="text-violet-300 text-sm mt-1">Ya realizaste este examen</p>
+                <p className="text-violet-300 text-xs sm:text-sm mt-1">Ya realizaste este examen</p>
               )}
-              <p className="text-sm mt-2 font-medium">
+              <p className="text-xs sm:text-sm mt-2 font-medium">
                 {notaActual.correctas} ✅ {notaActual.incorrectas} ❌ {notaActual.sin_responder} ⚪
               </p>
             </div>
           ) : (
-            <div className="bg-white/5 rounded-2xl p-6 text-center">
-              <p className="text-white font-medium text-lg">{examenHoy.titulo}</p>
+            <div className="bg-white/5 rounded-2xl p-4 sm:p-6 text-center">
+              <p className="text-white font-medium text-sm sm:text-lg">{examenHoy.titulo}</p>
               {examenHoy.descripcion && (
-                <p className="text-violet-400/60 text-sm mt-1">{examenHoy.descripcion}</p>
+                <p className="text-violet-400/60 text-xs sm:text-sm mt-1">{examenHoy.descripcion}</p>
               )}
-              <div className="flex justify-center gap-6 mt-3 text-sm text-violet-300/70">
-                <span>⏱️ {examenHoy.duracion_minutos} minutos</span>
+              <div className="flex justify-center gap-4 sm:gap-6 mt-2 sm:mt-3 text-xs sm:text-sm text-violet-300/70">
+                <span>⏱️ {examenHoy.duracion_minutos} min</span>
                 <span>📝 20 preguntas</span>
               </div>
 
               {!esHoraExamen() ? (
-                <div className="mt-4">
-                  <button disabled className="px-6 py-3 bg-violet-600/30 text-violet-300/50 rounded-xl font-medium cursor-not-allowed">Iniciar Examen</button>
-                  <p className="text-violet-400/50 text-xs mt-2">Disponible a las 2:00 PM</p>
+                <div className="mt-3 sm:mt-4">
+                  <button disabled className="px-4 sm:px-6 py-2 sm:py-3 text-sm bg-violet-600/30 text-violet-300/50 rounded-xl font-medium cursor-not-allowed">Iniciar Examen</button>
+                  <p className="text-violet-400/50 text-[10px] sm:text-xs mt-2">Disponible a las 2:00 PM</p>
                 </div>
               ) : examenFinalizo() ? (
-                <div className="mt-4">
-                  <p className="text-yellow-300 text-sm">El examen ya finalizó. No se aceptan más ingresos.</p>
+                <div className="mt-3 sm:mt-4">
+                  <p className="text-yellow-300 text-xs sm:text-sm">El examen ya finalizó. No se aceptan más ingresos.</p>
                 </div>
               ) : (
-                <a href={`/examen?examen_id=${examenHoy.id}`} className="mt-4 inline-block px-8 py-3 bg-violet-500 hover:bg-violet-400 text-white font-semibold rounded-xl transition-all shadow-lg shadow-violet-500/25">Iniciar Examen</a>
+                <a href={`/examen?examen_id=${examenHoy.id}`} className="mt-3 sm:mt-4 inline-block px-6 sm:px-8 py-2 sm:py-3 text-sm sm:text-base bg-violet-500 hover:bg-violet-400 text-white font-semibold rounded-xl transition-all shadow-lg">Iniciar Examen</a>
               )}
             </div>
           )}
         </div>
 
-        <div className="bg-white/5 backdrop-blur-xl rounded-3xl p-6 shadow-2xl border border-white/10">
-          <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-            <svg className="w-5 h-5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        {/* Historial */}
+        <div className="bg-white/5 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl border border-white/10">
+          <h2 className="text-base sm:text-lg font-bold text-white mb-3 sm:mb-4 flex items-center gap-2">
+            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
             Mis Notas
           </h2>
 
           {historial.length === 0 ? (
-            <div className="text-center py-6">
-              <p className="text-violet-300/60 text-sm">Aún no has realizado ningún examen.</p>
+            <div className="text-center py-4 sm:py-6">
+              <p className="text-violet-300/60 text-xs sm:text-sm">Aún no has realizado ningún examen.</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               {historial.map((item) => (
-                <div key={item.id} className="bg-white/5 rounded-xl p-4 border border-white/5 flex items-center justify-between">
-                  <div>
-                    <p className="text-white font-medium">{item.examen?.titulo || 'Examen'}</p>
-                    <p className="text-violet-400/60 text-xs mt-0.5">
+                <div key={item.id} className="bg-white/5 rounded-xl p-3 sm:p-4 border border-white/5 flex items-center justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-white font-medium text-xs sm:text-sm truncate">{item.examen?.titulo || 'Examen'}</p>
+                    <p className="text-violet-400/60 text-[10px] sm:text-xs mt-0.5">
                       {new Date(item.finalizado_en).toLocaleDateString('es-PE')}
                     </p>
                   </div>
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
+                  <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm shrink-0 ${
                     item.color === 'verde' ? 'bg-green-500/20 text-green-300' :
                     item.color === 'ambar' ? 'bg-yellow-500/20 text-yellow-300' :
                     'bg-red-500/20 text-red-300'
