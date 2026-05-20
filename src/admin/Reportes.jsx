@@ -132,18 +132,30 @@ export default function Reportes() {
         {/* Filtro por examen */}
         <div className="bg-white/5 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl border border-white/10 mb-4 sm:mb-6">
           <label className="block text-xs sm:text-sm font-medium text-violet-100 mb-2 sm:mb-3">Filtrar por Examen</label>
-          <select
-            value={examenSeleccionado}
-            onChange={(e) => cargarResultados(e.target.value)}
-            className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm bg-white/10 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-violet-400"
-          >
-            <option value="">-- Seleccionar examen --</option>
-            {examenes.map(examen => (
-              <option key={examen.id} value={examen.id}>
-                {examen.titulo} - {examen.fecha_programada}
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <select
+              value={examenSeleccionado}
+              onChange={(e) => cargarResultados(e.target.value)}
+              className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm bg-gray-800 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-violet-400 appearance-none cursor-pointer"
+              style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23a78bfa' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E")`,
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'right 12px center',
+                paddingRight: '2.5rem'
+              }}
+            >
+              <option value="" className="bg-gray-800 text-violet-300">-- Seleccionar examen --</option>
+              {examenes.map(examen => (
+                <option key={examen.id} value={examen.id} className="bg-gray-800 text-white">
+                  {examen.titulo} - {examen.fecha_programada}
+                </option>
+              ))}
+            </select>
+            {/* Flecha personalizada */}
+            <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-violet-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
         </div>
 
         {/* Tabla de resultados */}
@@ -223,7 +235,6 @@ export default function Reportes() {
                   </table>
                 </div>
 
-                {/* Estadísticas rápidas */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-white/10">
                   <div className="text-center">
                     <p className="text-xl sm:text-2xl font-bold text-green-300">

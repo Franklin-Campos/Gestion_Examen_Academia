@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
@@ -19,6 +19,9 @@ export default function Preguntas() {
   const [tipoMensaje, setTipoMensaje] = useState('')
   const [visible, setVisible] = useState(false)
   const [confirmarEliminar, setConfirmarEliminar] = useState(null)
+  const [subiendoJSON, setSubiendoJSON] = useState(false)
+
+  const fileInputRef = useRef(null)
 
   useEffect(() => {
     if (examenId) cargarPreguntas()
@@ -33,7 +36,7 @@ export default function Preguntas() {
           setMensaje('')
           setTipoMensaje('')
         }, 300)
-      }, 2000)
+      }, 3000)
       return () => clearTimeout(timer)
     }
   }, [mensaje])
@@ -86,6 +89,91 @@ export default function Preguntas() {
     setMostrarFormulario(false)
   }
 
+  // Cargar preguntas desde archivo JSON
+  const cargarDesdeJSON = async (e) => {
+    const archivo = e.target.files[0]
+    if (!archivo) return
+
+    setSubiendoJSON(true)
+    setMensaje('')
+    setTipoMensaje('')
+
+    try {
+      const texto = await archivo.text()
+      const datos = JSON.parse(texto)
+
+      // Validar que sea un array
+      if (!Array.isArray(datos)) {
+        setMensaje('Error: El archivo debe contener un array de preguntas')
+        setTipoMensaje('error')
+        setSubiendoJSON(false)
+        return
+      }
+
+      // Validar campos requeridos
+      const camposRequeridos = ['numero', 'enunciado', 'opcion_a', 'opcion_b', 'opcion_c', 'opcion_d', 'respuesta_correcta']
+      for (let i = 0; i < datos.length; i++) {
+        for (const campo of camposRequeridos) {
+          if (!datos[i][campo]) {
+            setMensaje(`Error: La pregunta #${i + 1} no tiene el campo "${campo}"`)
+            setTipoMensaje('error')
+            setSubiendoJSON(false)
+            return
+          }
+        }
+        if (!['a', 'b', 'c', 'd'].includes(datos[i].respuesta_correcta)) {
+          setMensaje(`Error: La pregunta #${i + 1} tiene respuesta_correcta inválida (debe ser a, b, c o d)`)
+          setTipoMensaje('error')
+          setSubiendoJSON(false)
+          return
+        }
+      }
+
+      // Verificar que no exceda 20
+      const totalDespues = preguntas.length + datos.length
+      if (totalDespues > 20) {
+        setMensaje(`Error: Solo puedes agregar ${20 - preguntas.length} preguntas más (máximo 20). El archivo tiene ${datos.length}.`)
+        setTipoMensaje('error')
+        setSubiendoJSON(false)
+        return
+      }
+
+      // Insertar todas las preguntas
+      const preguntasParaInsertar = datos.map((p, index) => ({
+        examen_id: parseInt(examenId),
+        numero: preguntas.length + index + 1,
+        enunciado: p.enunciado,
+        opcion_a: p.opcion_a,
+        opcion_b: p.opcion_b,
+        opcion_c: p.opcion_c,
+        opcion_d: p.opcion_d,
+        respuesta_correcta: p.respuesta_correcta
+      }))
+
+      const { error: insertError } = await supabase
+        .from('preguntas')
+        .insert(preguntasParaInsertar)
+
+      if (insertError) {
+        setMensaje('Error al insertar: ' + insertError.message)
+        setTipoMensaje('error')
+        setSubiendoJSON(false)
+        return
+      }
+
+      await cargarPreguntas()
+      setMensaje(`¡${datos.length} preguntas cargadas correctamente desde el archivo JSON!`)
+      setTipoMensaje('success')
+    } catch (error) {
+      setMensaje('Error al leer el archivo: ' + error.message)
+      setTipoMensaje('error')
+    }
+
+    setSubiendoJSON(false)
+    // Limpiar el input file
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
   const eliminarPregunta = async (id) => {
     await supabase.from('preguntas').delete().eq('id', id)
     await cargarPreguntas()
@@ -116,18 +204,39 @@ export default function Preguntas() {
               <p className="text-violet-300 text-xs sm:text-sm">{preguntas.length} de 20 preguntas cargadas</p>
             </div>
           </div>
-          <button
-            onClick={() => {
-              setMostrarFormulario(!mostrarFormulario)
-              setMensaje('')
-              setTipoMensaje('')
-              setVisible(false)
-            }}
-            disabled={preguntas.length >= 20}
-            className="w-full sm:w-auto px-4 py-2 text-xs sm:text-sm bg-violet-500 hover:bg-violet-400 disabled:bg-violet-600/30 disabled:text-violet-300/50 text-white rounded-xl transition-all"
-          >
-            {preguntas.length >= 20 ? '20/20 Completo' : `+ Agregar Pregunta (${preguntas.length}/20)`}
-          </button>
+          <div className="flex gap-2 w-full sm:w-auto">
+            {/* Botón para subir JSON */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json"
+              onChange={cargarDesdeJSON}
+              className="hidden"
+              id="input-json"
+            />
+            <label
+              htmlFor="input-json"
+              className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 text-xs sm:text-sm rounded-xl transition-all text-center cursor-pointer ${
+                subiendoJSON || preguntas.length >= 20
+                  ? 'bg-green-600/20 text-green-300/50 cursor-not-allowed'
+                  : 'bg-green-500/20 hover:bg-green-500/30 text-green-300'
+              }`}
+            >
+              {subiendoJSON ? 'Subiendo...' : '📄 Subir JSON'}
+            </label>
+            <button
+              onClick={() => {
+                setMostrarFormulario(!mostrarFormulario)
+                setMensaje('')
+                setTipoMensaje('')
+                setVisible(false)
+              }}
+              disabled={preguntas.length >= 20}
+              className="flex-1 sm:flex-none px-3 sm:px-4 py-2 text-xs sm:text-sm bg-violet-500 hover:bg-violet-400 disabled:bg-violet-600/30 disabled:text-violet-300/50 text-white rounded-xl transition-all"
+            >
+              {preguntas.length >= 20 ? '20/20 Completo' : `+ Agregar`}
+            </button>
+          </div>
         </div>
 
         {/* Mensaje flotante */}
@@ -168,7 +277,7 @@ export default function Preguntas() {
                 </svg>
               </div>
               <h3 className="text-lg sm:text-xl font-bold text-white mb-2">¿Eliminar pregunta?</h3>
-              <p className="text-violet-300 text-xs sm:text-sm mb-5 sm:mb-6">Esta acción no se puede deshacer. La pregunta se eliminará permanentemente.</p>
+              <p className="text-violet-300 text-xs sm:text-sm mb-5 sm:mb-6">Esta acción no se puede deshacer.</p>
               <div className="flex gap-2 sm:gap-3">
                 <button onClick={() => setConfirmarEliminar(null)} className="flex-1 py-2.5 sm:py-3 text-sm bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all font-medium">Cancelar</button>
                 <button onClick={() => eliminarPregunta(confirmarEliminar)} className="flex-1 py-2.5 sm:py-3 text-sm bg-red-500 hover:bg-red-400 text-white rounded-xl transition-all font-medium">Sí, eliminar</button>
@@ -177,59 +286,38 @@ export default function Preguntas() {
           </div>
         )}
 
-        {/* Formulario */}
+        {/* Formulario manual */}
         {mostrarFormulario && (
           <div className="bg-white/5 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl border border-white/10 mb-6 sm:mb-8">
             <h2 className="text-lg sm:text-xl font-bold text-white mb-4 sm:mb-6">Pregunta {preguntas.length + 1} de 20</h2>
             <form onSubmit={agregarPregunta} className="space-y-3 sm:space-y-4">
-              
               <div>
-                <label className="block text-xs sm:text-sm font-medium text-violet-100 mb-1.5 sm:mb-2">Enunciado de la Pregunta</label>
+                <label className="block text-xs sm:text-sm font-medium text-violet-100 mb-1.5 sm:mb-2">Enunciado</label>
                 <textarea value={enunciado} onChange={(e) => setEnunciado(e.target.value)} placeholder="¿Cuál es la capital de Francia?"
                   className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm bg-white/5 border border-white/10 rounded-xl text-white placeholder-violet-300/40 focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all" rows={3} required />
               </div>
-              
               <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                <div>
-                  <label className="block text-xs sm:text-sm font-medium text-violet-100 mb-1.5 sm:mb-2">Opción A</label>
-                  <input type="text" value={opcionA} onChange={(e) => setOpcionA(e.target.value)} placeholder="París"
-                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm bg-white/5 border border-white/10 rounded-xl text-white placeholder-violet-300/40 focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all" required />
-                </div>
-                <div>
-                  <label className="block text-xs sm:text-sm font-medium text-violet-100 mb-1.5 sm:mb-2">Opción B</label>
-                  <input type="text" value={opcionB} onChange={(e) => setOpcionB(e.target.value)} placeholder="Londres"
-                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm bg-white/5 border border-white/10 rounded-xl text-white placeholder-violet-300/40 focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all" required />
-                </div>
-                <div>
-                  <label className="block text-xs sm:text-sm font-medium text-violet-100 mb-1.5 sm:mb-2">Opción C</label>
-                  <input type="text" value={opcionC} onChange={(e) => setOpcionC(e.target.value)} placeholder="Roma"
-                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm bg-white/5 border border-white/10 rounded-xl text-white placeholder-violet-300/40 focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all" required />
-                </div>
-                <div>
-                  <label className="block text-xs sm:text-sm font-medium text-violet-100 mb-1.5 sm:mb-2">Opción D</label>
-                  <input type="text" value={opcionD} onChange={(e) => setOpcionD(e.target.value)} placeholder="Madrid"
-                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm bg-white/5 border border-white/10 rounded-xl text-white placeholder-violet-300/40 focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all" required />
-                </div>
+                {['a','b','c','d'].map((letra, i) => (
+                  <div key={letra}>
+                    <label className="block text-xs sm:text-sm font-medium text-violet-100 mb-1.5 sm:mb-2">Opción {letra.toUpperCase()}</label>
+                    <input type="text" value={[opcionA, opcionB, opcionC, opcionD][i]} onChange={(e) => [setOpcionA, setOpcionB, setOpcionC, setOpcionD][i](e.target.value)}
+                      placeholder={['París', 'Londres', 'Roma', 'Madrid'][i]}
+                      className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm bg-white/5 border border-white/10 rounded-xl text-white placeholder-violet-300/40 focus:outline-none focus:ring-2 focus:ring-violet-400 transition-all" required />
+                  </div>
+                ))}
               </div>
-
               <div>
                 <label className="block text-xs sm:text-sm font-medium text-violet-100 mb-2 sm:mb-3">Respuesta Correcta</label>
                 <div className="grid grid-cols-4 gap-2 sm:gap-3">
                   {['a', 'b', 'c', 'd'].map((letra) => (
                     <button key={letra} type="button" onClick={() => setRespuestaCorrecta(letra)}
                       className={`py-2.5 sm:py-3 rounded-xl font-bold text-base sm:text-lg transition-all duration-200 ${
-                        respuestaCorrecta === letra
-                          ? 'bg-green-500 text-white shadow-lg shadow-green-500/25 scale-105'
-                          : 'bg-white/10 text-violet-300 hover:bg-white/20 hover:scale-105'
-                      }`}>
-                      {letra.toUpperCase()}
-                    </button>
+                        respuestaCorrecta === letra ? 'bg-green-500 text-white shadow-lg shadow-green-500/25 scale-105' : 'bg-white/10 text-violet-300 hover:bg-white/20 hover:scale-105'
+                      }`}>{letra.toUpperCase()}</button>
                   ))}
                 </div>
               </div>
-
-              <button type="submit"
-                className="w-full py-2.5 sm:py-3 text-sm sm:text-base bg-violet-500 hover:bg-violet-400 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg shadow-violet-500/25">
+              <button type="submit" className="w-full py-2.5 sm:py-3 text-sm sm:text-base bg-violet-500 hover:bg-violet-400 text-white font-semibold rounded-xl transition-all shadow-lg">
                 Guardar Pregunta
               </button>
             </form>
@@ -240,9 +328,7 @@ export default function Preguntas() {
         <div className="bg-white/5 backdrop-blur-xl rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl border border-white/10">
           <h2 className="text-lg sm:text-xl font-bold text-white mb-4 sm:mb-6">
             Preguntas del Examen
-            {preguntas.length > 0 && (
-              <span className="text-violet-300 text-xs sm:text-sm font-normal ml-2">({preguntas.length}/20)</span>
-            )}
+            {preguntas.length > 0 && <span className="text-violet-300 text-xs sm:text-sm font-normal ml-2">({preguntas.length}/20)</span>}
           </h2>
           
           {preguntas.length === 0 ? (
@@ -251,6 +337,7 @@ export default function Preguntas() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <p className="text-violet-300/60 text-xs sm:text-sm">No hay preguntas cargadas aún.</p>
+              <p className="text-violet-400/50 text-[10px] sm:text-xs mt-1">Usa "+ Agregar" o "📄 Subir JSON" para cargar preguntas.</p>
             </div>
           ) : (
             <div className="space-y-2 sm:space-y-3">
@@ -259,30 +346,19 @@ export default function Preguntas() {
                   <div className="flex justify-between items-start gap-3 sm:gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="bg-violet-500/30 text-violet-200 text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-full shrink-0">
-                          {pregunta.numero}
-                        </span>
+                        <span className="bg-violet-500/30 text-violet-200 text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-full shrink-0">{pregunta.numero}</span>
                         <p className="text-white font-medium text-xs sm:text-sm">{pregunta.enunciado}</p>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-0.5 sm:gap-1 ml-0 sm:ml-7">
-                        <span className={`text-[10px] sm:text-sm px-2 py-0.5 sm:py-1 rounded-lg ${
-                          pregunta.respuesta_correcta === 'a' ? 'bg-green-500/30 text-green-300 font-semibold' : 'text-violet-300/60'
-                        }`}>A) {pregunta.opcion_a}</span>
-                        <span className={`text-[10px] sm:text-sm px-2 py-0.5 sm:py-1 rounded-lg ${
-                          pregunta.respuesta_correcta === 'b' ? 'bg-green-500/30 text-green-300 font-semibold' : 'text-violet-300/60'
-                        }`}>B) {pregunta.opcion_b}</span>
-                        <span className={`text-[10px] sm:text-sm px-2 py-0.5 sm:py-1 rounded-lg ${
-                          pregunta.respuesta_correcta === 'c' ? 'bg-green-500/30 text-green-300 font-semibold' : 'text-violet-300/60'
-                        }`}>C) {pregunta.opcion_c}</span>
-                        <span className={`text-[10px] sm:text-sm px-2 py-0.5 sm:py-1 rounded-lg ${
-                          pregunta.respuesta_correcta === 'd' ? 'bg-green-500/30 text-green-300 font-semibold' : 'text-violet-300/60'
-                        }`}>D) {pregunta.opcion_d}</span>
+                        {['a','b','c','d'].map((letra) => (
+                          <span key={letra} className={`text-[10px] sm:text-sm px-2 py-0.5 sm:py-1 rounded-lg ${
+                            pregunta.respuesta_correcta === letra ? 'bg-green-500/30 text-green-300 font-semibold' : 'text-violet-300/60'
+                          }`}>{letra.toUpperCase()}) {pregunta[`opcion_${letra}`]}</span>
+                        ))}
                       </div>
                     </div>
-                    <button
-                      onClick={() => setConfirmarEliminar(pregunta.id)}
-                      className="p-1.5 sm:p-2 bg-red-500/10 hover:bg-red-500/30 text-red-300 hover:text-red-200 rounded-lg transition-all text-sm shrink-0"
-                      title="Eliminar pregunta">
+                    <button onClick={() => setConfirmarEliminar(pregunta.id)}
+                      className="p-1.5 sm:p-2 bg-red-500/10 hover:bg-red-500/30 text-red-300 hover:text-red-200 rounded-lg transition-all text-sm shrink-0" title="Eliminar pregunta">
                       <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                       </svg>
